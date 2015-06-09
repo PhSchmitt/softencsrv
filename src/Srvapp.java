@@ -137,6 +137,12 @@ public class Srvapp {
 				&& j < dataSet.fullencryptedstream.length); j++)
 		{
 	//		System.out.println("i: "+i + "j: " + j);
+			
+			/* reorder:
+			 * old: aprimes[i]=aj0 aj1 aj2 aj3 a(j+1)0 a(j+1)1 a(j+1)2 a(j+1)3 ...
+			 * new: fullencstream[j]=aj0 aj1 aj2 aj3 bj0 bj1 bj2 bj3 ...
+			 * requires extracting the bits, shifting them to the right position and ORing them to the new stream
+			 */
 			switch (j%4)
 			{
 			case 0:
@@ -202,11 +208,12 @@ public class Srvapp {
 			        new InputStreamReader(clientSocket.getInputStream()));
 			)
 			{
-//			String inputLine = new String();
-			CharBuffer cb;
+			String inputLine = new String();
+			String tmpinput = new String();
+//			CharBuffer cb;
 			//Bytereader oder sowas
-            while (in.read(tmpinput) != -1) {
-		       
+            while ((inputLine = in.readLine()) != null){
+		       tmpinput += inputLine;
 		    }
             System.out.println("Data from port: "+tmpinput);	
             return tmpinput.toString();
