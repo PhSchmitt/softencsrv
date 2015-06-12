@@ -1,8 +1,11 @@
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  *
@@ -25,9 +28,6 @@ public class Srvapp {
 
     final static int portNumber = 8080;
 
-    /**
-     * @param args
-     */
     public static void main(String[] args) {
         DataSet data = readEncryptedDataFromSocket();
         reorderData(data);
@@ -37,91 +37,69 @@ public class Srvapp {
 
 
     private static DataSet readEncryptedDataFromSocket() {
-        char[] firstDataStream = getMessage().toCharArray();
-        char[] secondDataStream = getMessage().toCharArray();
-        char[] thirdDataStream = getMessage().toCharArray();
-        char[] fourthDataStream = getMessage().toCharArray();
-
-        DataSet data = new DataSet(Math.max(firstDataStream.length,
-                Math.max(secondDataStream.length,
-                        Math.max(thirdDataStream.length, fourthDataStream.length))));
-
+        List<String> wholeDataStream = getMessage();
+        System.out.println(wholeDataStream.size());
+        List<String> aprimes = new ArrayList<>();
+        List<String> bprimes = new ArrayList<>();
+        List<String> cprimes = new ArrayList<>();
+        List<String> dprimes = new ArrayList<>();
         final char indicatorAprime = (char) 0b00;
         final char indicatorBprime = (char) 0b01;
         final char indicatorCprime = (char) 0b10;
         final char indicatorDprime = (char) 0b11;
 
-        char indicatorFirst = extractIndicator(firstDataStream[0]);
-        switch (indicatorFirst) {
-            case indicatorAprime:
-                data.aprimes = Arrays.copyOfRange(firstDataStream, 1, firstDataStream.length);
-                break;
-            case indicatorBprime:
-                data.bprimes = Arrays.copyOfRange(firstDataStream, 1, firstDataStream.length);
-                break;
-            case indicatorCprime:
-                data.cprimes = Arrays.copyOfRange(firstDataStream, 1, firstDataStream.length);
-                break;
-            case indicatorDprime:
-                data.dprimes = Arrays.copyOfRange(firstDataStream, 1, firstDataStream.length);
-                break;
+        for (String s : wholeDataStream) {
+            char indicator = extractIndicator(s.toCharArray()[0]);
+            switch (indicator) {
+                case indicatorAprime:
+                    aprimes.add(s);
+                    break;
+                case indicatorBprime:
+                    bprimes.add(s);
+                    break;
+                case indicatorCprime:
+                    cprimes.add(s);
+                    break;
+                case indicatorDprime:
+                    dprimes.add(s);
+                    break;
+            }
         }
 
-        char indicatorSecond = extractIndicator(secondDataStream[0]);
-        switch (indicatorSecond) {
-            case indicatorAprime:
-                data.aprimes = Arrays.copyOfRange(secondDataStream, 1, secondDataStream.length);
-                break;
-            case indicatorBprime:
-                data.bprimes = Arrays.copyOfRange(secondDataStream, 1, secondDataStream.length);
-                break;
-            case indicatorCprime:
-                data.cprimes = Arrays.copyOfRange(secondDataStream, 1, secondDataStream.length);
-                break;
-            case indicatorDprime:
-                data.dprimes = Arrays.copyOfRange(secondDataStream, 1, secondDataStream.length);
-                break;
-        }
+        return new DataSet(streamToCharArray(aprimes), streamToCharArray(bprimes),
+                streamToCharArray(cprimes), streamToCharArray(dprimes));
+    }
 
-        char indicatorThird = extractIndicator(thirdDataStream[0]);
-        switch (indicatorThird) {
-            case indicatorAprime:
-                data.aprimes = Arrays.copyOfRange(thirdDataStream, 1, thirdDataStream.length);
-                break;
-            case indicatorBprime:
-                data.bprimes = Arrays.copyOfRange(thirdDataStream, 1, thirdDataStream.length);
-                break;
-            case indicatorCprime:
-                data.cprimes = Arrays.copyOfRange(thirdDataStream, 1, thirdDataStream.length);
-                break;
-            case indicatorDprime:
-                data.dprimes = Arrays.copyOfRange(thirdDataStream, 1, thirdDataStream.length);
-                break;
+    private static char[] streamToCharArray(List<String> stream) {
+        int nextSubstream = 0;
+        String result = "";
+        Boolean lastSentStringAdded = false;
+        Boolean lastElementAdded = false;
+        while (!lastSentStringAdded || !lastElementAdded) {
+            if (!stream.isEmpty()) {
+                for (int i = 0; i < stream.size(); i++) {
+                    String s = stream.get(i);
+                    if ((s.toCharArray()[0] & 0x0FFF) == nextSubstream) {
+                        result += s.substring(1);
+                        if (0 != maskChar(s.toCharArray()[0], (char) 0x1000, Operation.and)) {
+                            lastSentStringAdded = true;
+                        }
+                        nextSubstream++;
+                        stream.remove(s);
+                    }
+                    if (stream.isEmpty()) {
+                        lastElementAdded = true;
+                    }
+                }
+            }
         }
-
-        char indicatorFourth = extractIndicator(fourthDataStream[0]);
-        switch (indicatorFourth) {
-            case indicatorAprime:
-                data.aprimes = Arrays.copyOfRange(fourthDataStream, 1, fourthDataStream.length);
-                break;
-            case indicatorBprime:
-                data.bprimes = Arrays.copyOfRange(fourthDataStream, 1, fourthDataStream.length);
-                break;
-            case indicatorCprime:
-                data.cprimes = Arrays.copyOfRange(fourthDataStream, 1, fourthDataStream.length);
-                break;
-            case indicatorDprime:
-                data.dprimes = Arrays.copyOfRange(fourthDataStream, 1, fourthDataStream.length);
-                break;
-        }
-        return data;
+        return result.toCharArray();
     }
 
     static char extractIndicator(char indicatorAndCntr) {
         final char maskIndicator = (char) 0xC000;
         char indicator = maskChar(indicatorAndCntr, maskIndicator, Operation.and);
-        char shiftedIndicator = shiftBits(indicator, 14, Direction.right);
-        return shiftedIndicator;
+        return shiftBits(indicator, 14, Direction.right);
     }
 
     private static void reorderData(DataSet dataSet) {
@@ -139,7 +117,6 @@ public class Srvapp {
 			 * new: fullencstream[j]=aj0 aj1 aj2 aj3 bj0 bj1 bj2 bj3 ...
 			 * requires extracting the bits, shifting them to the right position and ORing them to the new stream
 			 */
-            System.out.println("dprimes: " + Integer.toBinaryString(dataSet.dprimes[i]));
             switch (j % 4) {
                 case 0:
                     dataSet.fullencryptedstream[j] = maskChar(
@@ -230,7 +207,7 @@ public class Srvapp {
                             maskChar(dataSet.fullencryptedstream[j], secondsubcharNullMask, Operation.and),
                             shiftBits(
                                     maskChar(dataSet.bprimes[i], fourthsubcharOnlyMask, Operation.and),
-                                    8, Direction.right),
+                                    8, Direction.left),
                             Operation.or);
                     dataSet.fullencryptedstream[j] = maskChar(
                             maskChar(dataSet.fullencryptedstream[j], thirdsubcharNullMask, Operation.and),
@@ -246,8 +223,6 @@ public class Srvapp {
                             Operation.or);
                     //iterated through all 4 subchars => next char
                     i++;
-
-                    System.out.println("fullenc 3: " + Integer.toBinaryString(dataSet.fullencryptedstream[j]));
                     break;
             }
         }
@@ -289,31 +264,73 @@ public class Srvapp {
                 decryptedChar, shiftBits(c, 4, Direction.left), Operation.or);
         decryptedChar = maskChar(
                 decryptedChar, shiftBits(d, 0, Direction.noDirection), Operation.or);
-        System.out.println("Cleartext-Data: " + decryptedChar);
-
         return decryptedChar;
     }
 
-    private static String getMessage() {
+    private static List<String> getMessage() {
         try {
-            ServerSocket serverSocket = new ServerSocket(portNumber);
-            Socket clientSocket = serverSocket.accept();
-            BufferedReader in = new BufferedReader(
-                    new InputStreamReader(clientSocket.getInputStream()));
-            String inputLine = new String();
-            String inputString = new String();
-            while ((inputLine = in.readLine()) != null) {
-                inputString += inputLine;
+            List<String> result = new ArrayList<>();
+            Boolean lastAreceived = false;
+            Boolean lastBreceived = false;
+            Boolean lastCreceived = false;
+            Boolean lastDreceived = false;
+
+            while (!(lastAreceived && lastBreceived && lastCreceived && lastDreceived)) {
+                String inputString = readSingleMessageFromSocket();
+                result.add(inputString);
+                switch ((inputString.toCharArray()[0] & 0xF000) >>> 12) {
+                    case 0b0010:
+//                        System.out.println("a following");
+                        break;
+                    case 0b0011:
+//                        System.out.println("a last");
+                        lastAreceived = true;
+                        break;
+                    case 0b0110:
+//                        System.out.println("b following");
+                        break;
+                    case 0b0111:
+//                        System.out.println("b last");
+                        lastBreceived = true;
+                        break;
+                    case 0b1010:
+//                        System.out.println("c following");
+                        break;
+                    case 0b1011:
+//                        System.out.println("c last");
+                        lastCreceived = true;
+                        break;
+                    case 0b1110:
+//                        System.out.println("d following");
+                        break;
+                    case 0b1111:
+//                        System.out.println("d last");
+                        lastDreceived = true;
+                        break;
+                }
             }
-            clientSocket.close();
-            serverSocket.close();
-            System.out.println(inputString);
-            return inputString;
+            return result;
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("Error in creating socket");
-            return new String();
+            return new ArrayList<>();
         }
+    }
+
+    private static String readSingleMessageFromSocket() throws IOException {
+        ServerSocket serverSocket = new ServerSocket(portNumber);
+        Socket clientSocket = serverSocket.accept();
+        BufferedReader in = new BufferedReader(
+                new InputStreamReader(clientSocket.getInputStream()));
+        String inputLine;
+        String inputString = "";
+
+        while ((inputLine = in.readLine()) != null) {
+            inputString += inputLine;
+        }
+        clientSocket.close();
+        serverSocket.close();
+        return inputString;
     }
 
     public static char shiftBits(char toShift, int shiftcount, Direction direction) {

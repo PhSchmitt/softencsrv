@@ -9,16 +9,24 @@ public class DataSet {
 	public char[] fulldecryptedstream;
 
     /**
-     * @param arraylength = incoming data length (with leading indicatorAndPktCntr)
-     *                    all single arrays within DataSet are of length arraylength-1
+     * @param arraylength = incoming data length (without leading indicatorAndPktCntr)
      */
     public DataSet(int arraylength) {
-        aprimes = new char[arraylength - 1];
-        bprimes = new char[arraylength - 1];
-        cprimes = new char[arraylength - 1];
-        dprimes = new char[arraylength-1];
-        fullencryptedstream = new char [(arraylength-1)*4];
-		fulldecryptedstream = new char [(arraylength-1)*4];
-	}
+        aprimes = new char[arraylength];
+        bprimes = new char[arraylength];
+        cprimes = new char[arraylength];
+        dprimes = new char[arraylength];
+        fullencryptedstream = new char[(arraylength) * 4];
+        fulldecryptedstream = new char[(arraylength) * 4];
+    }
+
+    public DataSet(char[] aprimesToSet, char[] bprimesToSet, char[] cprimesToSet, char[] dprimesToSet) {
+        aprimes = aprimesToSet;
+        bprimes = bprimesToSet;
+        cprimes = cprimesToSet;
+        dprimes = dprimesToSet;
+        fullencryptedstream = new char[aprimesToSet.length + bprimesToSet.length + cprimesToSet.length + dprimesToSet.length];
+        fulldecryptedstream = new char[aprimesToSet.length + bprimesToSet.length + cprimesToSet.length + dprimesToSet.length];
+    }
 
 }
