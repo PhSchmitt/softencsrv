@@ -38,7 +38,6 @@ public class Srvapp {
 
     private static DataSet readEncryptedDataFromSocket() {
         List<String> wholeDataStream = getMessage();
-        System.out.println(wholeDataStream.size());
         List<String> aprimes = new ArrayList<>();
         List<String> bprimes = new ArrayList<>();
         List<String> cprimes = new ArrayList<>();
@@ -280,31 +279,23 @@ public class Srvapp {
                 result.add(inputString);
                 switch ((inputString.toCharArray()[0] & 0xF000) >>> 12) {
                     case 0b0010:
-//                        System.out.println("a following");
                         break;
                     case 0b0011:
-//                        System.out.println("a last");
                         lastAreceived = true;
                         break;
                     case 0b0110:
-//                        System.out.println("b following");
                         break;
                     case 0b0111:
-//                        System.out.println("b last");
                         lastBreceived = true;
                         break;
                     case 0b1010:
-//                        System.out.println("c following");
                         break;
                     case 0b1011:
-//                        System.out.println("c last");
                         lastCreceived = true;
                         break;
                     case 0b1110:
-//                        System.out.println("d following");
                         break;
                     case 0b1111:
-//                        System.out.println("d last");
                         lastDreceived = true;
                         break;
                 }
