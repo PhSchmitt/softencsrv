@@ -8,15 +8,12 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- *
- */
-
-/**
  * @author philipp
  */
 public class Srvapp {
 
-    // first 4 bits of char
+    //constants
+    // subchar = 4 bits of a char
     final static char firstsubcharNullMask = (char) 0x0FFF;
     final static char secondsubcharNullMask = (char) 0xF0FF;
     final static char thirdsubcharNullMask = (char) 0xFF0F;
@@ -35,18 +32,25 @@ public class Srvapp {
         System.out.println(data.fulldecryptedstream);
     }
 
-
+    /**
+     * reads the incoming data and splits it in a' to d'
+     *
+     * @return new DataSet with a' to d'
+     */
     private static DataSet readEncryptedDataFromSocket() {
-        List<String> wholeDataStream = getMessage();
-        List<String> aprimes = new ArrayList<>();
-        List<String> bprimes = new ArrayList<>();
-        List<String> cprimes = new ArrayList<>();
-        List<String> dprimes = new ArrayList<>();
         final char indicatorAprime = (char) 0b00;
         final char indicatorBprime = (char) 0b01;
         final char indicatorCprime = (char) 0b10;
         final char indicatorDprime = (char) 0b11;
 
+        List<String> aprimes = new ArrayList<>();
+        List<String> bprimes = new ArrayList<>();
+        List<String> cprimes = new ArrayList<>();
+        List<String> dprimes = new ArrayList<>();
+
+        List<String> wholeDataStream = getMessage();
+
+        // resolve the "type" (a' to d') of the incoming packet
         for (String s : wholeDataStream) {
             char indicator = extractIndicator(s.toCharArray()[0]);
             switch (indicator) {
@@ -69,6 +73,11 @@ public class Srvapp {
                 streamToCharArray(cprimes), streamToCharArray(dprimes));
     }
 
+    /**
+     * Casts a List of String to a single Char[]
+     * @param stream List of String
+     * @return Char[] consisting of all Strings of the List
+     */
     private static char[] streamToCharArray(List<String> stream) {
         int nextSubstream = 0;
         String result = "";
@@ -95,9 +104,15 @@ public class Srvapp {
         return result.toCharArray();
     }
 
+    /**
+     *
+     * @param indicatorAndCntr indicatorAndCntr char of a data stream
+     * @return indicator (a' to d') in binary notation (00 to 11)
+     */
     static char extractIndicator(char indicatorAndCntr) {
         final char maskIndicator = (char) 0xC000;
         char indicator = maskChar(indicatorAndCntr, maskIndicator, Operation.and);
+        //move the extracted bits to the right side of the char
         return shiftBits(indicator, 14, Direction.right);
     }
 
@@ -274,6 +289,7 @@ public class Srvapp {
             Boolean lastCreceived = false;
             Boolean lastDreceived = false;
 
+            //ensure that all Streams a' to d' have been received
             while (!(lastAreceived && lastBreceived && lastCreceived && lastDreceived)) {
                 String inputString = readSingleMessageFromSocket();
                 result.add(inputString);
@@ -303,7 +319,7 @@ public class Srvapp {
             return result;
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("Error in creating socket");
+            System.out.println("Error while creating socket");
             return new ArrayList<>();
         }
     }
@@ -369,5 +385,4 @@ public class Srvapp {
         xor,
         noOperation
     }
-
 }
