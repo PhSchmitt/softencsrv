@@ -24,6 +24,7 @@ public class Srvapp {
     final static char fourthsubcharOnlyMask = (char) 0x000F;
 
     final static int portNumber = 8080;
+    final static char finchar = (char) 0xFFFF;
 
     public static void main(String[] args) {
         DataSet data = readEncryptedDataFromSocket();
@@ -289,10 +290,12 @@ public class Srvapp {
             Boolean lastCreceived = false;
             Boolean lastDreceived = false;
 
-            //ensure that all Streams a' to d' have been received
-            while (!(lastAreceived && lastBreceived && lastCreceived && lastDreceived)) {
-                String inputString = readSingleMessageFromSocket();
-                result.add(inputString);
+
+            String inputString = readFromSocket();
+            while (!inputString.isEmpty()) {
+                result.add(inputString.substring(0, inputString.indexOf(finchar)));
+
+                //ensure that all Streams a' to d' have been received
                 switch ((inputString.toCharArray()[0] & 0xF000) >>> 12) {
                     case 0b0010:
                         break;
@@ -315,8 +318,22 @@ public class Srvapp {
                         lastDreceived = true;
                         break;
                 }
+
+                if (inputString.charAt(inputString.indexOf(finchar) + 1) == finchar) {
+                    if (inputString.indexOf(finchar) != inputString.lastIndexOf(finchar) - 1) {
+                        inputString = inputString.substring(inputString.indexOf(finchar) + 2);
+                    } else {
+                        inputString = "";
+                    }
+                }
+
             }
-            return result;
+            if (lastAreceived && lastBreceived && lastCreceived && lastDreceived) {
+                return result;
+            } else {
+                System.out.println("received incomplete data");
+                return new ArrayList<>();
+            }
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("Error while creating socket");
@@ -324,7 +341,7 @@ public class Srvapp {
         }
     }
 
-    private static String readSingleMessageFromSocket() throws IOException {
+    private static String readFromSocket() throws IOException {
         ServerSocket serverSocket = new ServerSocket(portNumber);
         Socket clientSocket = serverSocket.accept();
         BufferedReader in = new BufferedReader(
